@@ -32,6 +32,7 @@ public class ServiceCentral implements ServiceDistributeur
 
     public void supprimerCalculateur(ServiceCalculateur c) throws RemoteException{
         this.listesServices.remove(c);
+        System.out.println("service : "+ c +" supprimé");
     }
 
 }

@@ -24,6 +24,7 @@ public class Serveur
 
             Registry registry = LocateRegistry.createRegistry(1098);
             registry.rebind("Distributeur", distrib);
-            System.out.println()
+
+            System.out.println("serveur lancé");
     }
 }

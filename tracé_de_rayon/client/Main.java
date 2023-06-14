@@ -16,7 +16,9 @@ public class Main{
             System.exit(1);
         }
 
-        
+        //nombre de division doit etre un carré parfait
+
+
         // on récupère les paramètres
         // ip du serveur centrale
         String adresse = args[0];
@@ -27,9 +29,7 @@ public class Main{
         // nombre de division de l'image
         int nbDivision = Integer.parseInt(args[3]);
 
-        int largeur = 512, hauteur = 512;
-
-
+        int largeur = Integer.parseInt(args[4]), hauteur = Integer.parseInt(args[5]);
 
 
         try{
@@ -41,7 +41,6 @@ public class Main{
             ServiceDistributeur distributeur = (ServiceDistributeur) reg.lookup("Distributeur");
 
 
-
             // on charge la scène
             System.out.println("Chargement de la scène...");
             Scene scene = new Scene(fichier, largeur, hauteur);
@@ -49,39 +48,57 @@ public class Main{
 
             System.out.println("Scène chargée");
 
-            // Calculer les dimensions de chaque division
-            final int divLargeur = largeur / nbDivision;
-            final int divHauteur = hauteur / nbDivision;
+            // Calculer le nombres de divisions
+            int [] meilleureOptions = trouverMeilleureSolution(nbDivision);
+            int nbLignes = meilleureOptions[0];
+            int nbColonnes = meilleureOptions[1]; 
+                
+            int divHauteur = hauteur/nbLignes;
+            int divLargeur = largeur/nbColonnes;
 
-
-            System.out.println(divLargeur);
             // on fait un thread et on récupère des services de calculs (autant qu'il y'a de nbDivision)
                 // distributeur.recupererCalculateur() 
                 // on calcule une image grace au calculateur courant 
                 // on affiche l'image sur la scene 
 
-                for (int i = 0; i < nbDivision; i++) {
-                    final int divisionIndex = i;
-
+            for (int j =0; j<nbLignes; j++){
+                for (int i = 0; i < nbColonnes; i++) {
+                    int indexI = i;
+                    int indexJ = j;
                      // Créer un nouveau thread pour chaque division
                     new Thread(() -> {
-                            // Récupérer un service calculateur auprès du distributeur
-                            ServiceCalculateur calculateur = distributeur.recupererCalculateur();
-                            int x = divLargeur * divisionIndex;
-                            int y = divHauteur * divisionIndex;
-                            System.out.println("x : " + x );
-                            System.out.println("y : " + y );
-                            // Calculer une image à l'aide du calculateur courant
-                            Image image = calculateur.calculer(scene, x, y, divLargeur, divHauteur);
+                            //tant que réaliser = false
+                            boolean realiser=false;
+                            while(!realiser){
+                                
+                                    // Récupérer un service calculateur auprès du distributeur
+                                    ServiceCalculateur calculateur = distributeur.recupererCalculateur();
+                                    int x = divLargeur * indexI;
+                                    int y = divHauteur * indexJ;
+                                    
+                                try{
+                                    // Calculer une image à l'aide du calculateur courant
+                                    Image image = calculateur.calculer(scene, x, y, divLargeur, divHauteur);
 
-                            // Afficher l'image sur la scène
-                            disp.setImage(image, x, y);
-                        
-    }).start();
+                                    // Afficher l'image sur la scène
+                                    disp.setImage(image, x, y);
 
-    
-}
-            
+                                    realiser = true;
+                                    System.out.println(" Division : " + (nbColonnes*indexJ + indexI) +" construite !");
+
+                                }catch(NullPointerException e){
+                                    try{
+                                        System.out.println("en attente d'un service ...");
+                                        Thread.sleep(10000);
+                                    }catch (InterruptedException except){}
+                                }
+                                catch(Exception e){
+                                    distributeur.supprimerCalculateur(calculateur);
+                                }
+                            }
+                    }).start();         
+                }
+            }
 
 
             
@@ -94,6 +111,35 @@ public class Main{
 
 
 
+    }
+
+    public static int[] trouverMeilleureSolution(int n) {
+        if (n <= 0) {
+            System.out.println("Le nombre de parties doit être supérieur à zéro.");
+            return null;
+        }
+        
+        int meilleureDifference = Integer.MAX_VALUE; // Initialiser avec une valeur maximale
+        int[] meilleureSolution = new int[2];
+        
+        // Parcourir tous les diviseurs du nombre
+        for (int i = 1; i <= Math.sqrt(n); i++) {
+            if (n % i == 0) {
+                int diviseur1 = i;
+                int diviseur2 = n / i;
+                
+                int difference = Math.abs(diviseur1 - diviseur2);
+                
+                // Mettre à jour la meilleure solution si la différence est minimale
+                if (difference < meilleureDifference) {
+                    meilleureDifference = difference;
+                    meilleureSolution[0] = diviseur1;
+                    meilleureSolution[1] = diviseur2;
+                }
+            }
+        }
+        
+        return meilleureSolution;
     }
 
 
