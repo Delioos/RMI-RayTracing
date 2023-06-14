@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.rmi.RemoteException;
+import java.rmi.server.*;
 
 
 public class ServiceCentral implements ServiceDistributeur
@@ -7,12 +8,18 @@ public class ServiceCentral implements ServiceDistributeur
     private ArrayList<ServiceCalculateur> listesServices = new ArrayList<>();
     private int index = 0;
 
-    public void enregistrerClient(ServiceCalculateur c)
-    {
+    public void enregistrerClient(ServiceCalculateur c) throws RemoteException
+    {   
+        try {
+            String clientHost = RemoteServer.getClientHost();
+            System.out.println("Ajout du service calculateur : " + clientHost);
+        } catch (ServerNotActiveException e) {
+            System.err.println("Erreur lors de l'obtention de l'adresse de l'hôte client : " + e);
+        }
         this.listesServices.add(c);
     }
 
-    public ServiceCalculateur recupererCalculateur(){
+    public ServiceCalculateur recupererCalculateur() throws RemoteException {
         if (listesServices.size() == 0)
             return null;
         if (index >= listesServices.size()-1)
@@ -23,7 +30,7 @@ public class ServiceCentral implements ServiceDistributeur
         return listesServices.get(index);
     }
 
-    public void supprimerCalculateur(ServiceCalculateur c){
+    public void supprimerCalculateur(ServiceCalculateur c) throws RemoteException{
         this.listesServices.remove(c);
     }
 

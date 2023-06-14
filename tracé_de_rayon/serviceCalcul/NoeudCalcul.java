@@ -7,6 +7,7 @@ import java.rmi.registry.Registry;
 import java.util.Scanner;
 import java.util.InputMismatchException;
 import java.rmi.server.UnicastRemoteObject;
+import raytracer.Scene;
 
 
 public class NoeudCalcul {

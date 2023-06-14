@@ -1,9 +1,10 @@
 import raytracer.Scene;
 import raytracer.Image;
 import java.rmi.Remote;
+import java.rmi.RemoteException;
 
 public interface ServiceCalculateur extends Remote{
 
-    public Image calculer(Scene sc, int x0, int y0, int  l, int h);
+    public Image calculer(Scene sc, int x0, int y0, int  l, int h) throws RemoteException;
 
 }
