@@ -4,18 +4,19 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
 import java.rmi.NotBoundException;
 import java.rmi.server.ServerNotActiveException;
-
+import raytracer.*; 
 
 
 public class Main{
     public static void main(String[] args) throws RemoteException, NotBoundException, ServerNotActiveException{
 
         // on passe en paramètre l'adresse, le port et le nombre de division de l'image
-        if(args.length != 4){
-            System.out.println("Usage : java Main [adresse service central] [port service central] [fichier image] [nbDivision]");
+        if(args.length != 6){
+            System.out.println("Usage : java Main [adresse service central] [port service central] [fichier image] [nbDivision] [largeur] [hauteur]");
             System.exit(1);
         }
 
+        
         // on récupère les paramètres
         // ip du serveur centrale
         String adresse = args[0];
@@ -26,6 +27,9 @@ public class Main{
         // nombre de division de l'image
         int nbDivision = Integer.parseInt(args[3]);
 
+        int largeur = 512, hauteur = 512;
+
+
 
 
         try{
@@ -34,47 +38,48 @@ public class Main{
             Registry reg = LocateRegistry.getRegistry(adresse, port);
             // on recupere le service à grace à son nom
             // et on crée une instance de classe à l'aide de ce service, en le castant à l'aide de l'interface partagée.
-            ServiceDistributeur distributeur = (ServiceDistributeur) reg.lookup("distributeur");
+            ServiceDistributeur distributeur = (ServiceDistributeur) reg.lookup("Distributeur");
 
 
 
             // on charge la scène
             System.out.println("Chargement de la scène...");
-            Scene scene = new Scene(fichier, 512, 512);
+            Scene scene = new Scene(fichier, largeur, hauteur);
+            Disp disp = new Disp("Raytracer", largeur, hauteur);
+
             System.out.println("Scène chargée");
 
-            // Largeur et hauteur de chaque division
-            int divLargeur = scene.getLargeur() / nbDivision;
-            int divHauteur = scene.getHauteur() / nbDivision;
+            // Calculer les dimensions de chaque division
+            final int divLargeur = largeur / nbDivision;
+            final int divHauteur = hauteur / nbDivision;
 
+
+            System.out.println(divLargeur);
             // on fait un thread et on récupère des services de calculs (autant qu'il y'a de nbDivision)
                 // distributeur.recupererCalculateur() 
                 // on calcule une image grace au calculateur courant 
                 // on affiche l'image sur la scene 
 
                 for (int i = 0; i < nbDivision; i++) {
-                    int divisionIndex = i;
+                    final int divisionIndex = i;
 
                      // Créer un nouveau thread pour chaque division
-                    Thread thread = new Thread(() -> {
-                        try {
+                    new Thread(() -> {
                             // Récupérer un service calculateur auprès du distributeur
-                            ServiceCalculateurr calculateur = distributeur.recupererCalculateur();
-                            int x = 0+divLargeur*i; 
-                            int y = 0+divHauteur*i; 
+                            ServiceCalculateur calculateur = distributeur.recupererCalculateur();
+                            int x = divLargeur * divisionIndex;
+                            int y = divHauteur * divisionIndex;
+                            System.out.println("x : " + x );
+                            System.out.println("y : " + y );
                             // Calculer une image à l'aide du calculateur courant
-                            Image image = calculateur.calculerImage(scene, x, y, divLargeur, divHauteur);
+                            Image image = calculateur.calculer(scene, x, y, divLargeur, divHauteur);
 
                             // Afficher l'image sur la scène
-                            disp.setImage(image, x0, y0);
-                        } catch (RemoteException e) {
-                            // Gérer l'exception RemoteException
-                        }
-    });
+                            disp.setImage(image, x, y);
+                        
+    }).start();
 
     
-    // Démarrer le thread
-    thread.start();
 }
             
 
@@ -82,7 +87,9 @@ public class Main{
             
 
         }catch(RemoteException e){
+            e.printStackTrace(); 
         }catch(NotBoundException e){
+            e.printStackTrace();
         }
 
 
