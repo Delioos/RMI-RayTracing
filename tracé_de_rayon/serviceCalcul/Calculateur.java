@@ -2,6 +2,8 @@ import raytracer.Scene;
 import raytracer.Image;
 import java.rmi.RemoteException;
 import java.rmi.server.*;
+import java.rmi.ConnectException;
+
 
 public class Calculateur implements ServiceCalculateur {
 

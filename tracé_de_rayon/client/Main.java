@@ -5,6 +5,7 @@ import java.rmi.RemoteException;
 import java.rmi.NotBoundException;
 import java.rmi.server.ServerNotActiveException;
 import raytracer.*; 
+import java.lang.Math;
 
 
 public class Main{
@@ -12,7 +13,7 @@ public class Main{
 
         // on passe en paramètre l'adresse, le port et le nombre de division de l'image
         if(args.length != 6){
-            System.out.println("Usage : java Main [adresse service central] [port service central] [fichier image] [nbDivision] [largeur] [hauteur]");
+            System.out.println("Usage : java Main [adresse service central] [port service central] [fichier image] [nbDivision par coté] [largeur(entier)] [hauteur(entier)]");
             System.exit(1);
         }
 
@@ -49,57 +50,77 @@ public class Main{
             System.out.println("Scène chargée");
 
             // Calculer le nombres de divisions
-            int [] meilleureOptions = trouverMeilleureSolution(nbDivision);
-            int nbLignes = meilleureOptions[0];
-            int nbColonnes = meilleureOptions[1]; 
-                
-            int divHauteur = hauteur/nbLignes;
-            int divLargeur = largeur/nbColonnes;
+            int divHauteur = hauteur / nbDivision;
+            int divLargeur = largeur / nbDivision;
+            
+            System.out.println(nbDivision+" colonnes et lignes de respectivement : "+divLargeur+" ; "+divHauteur + "\n donc finalement : "+divHauteur*nbDivision+"*"+divLargeur*nbDivision);
 
             // on fait un thread et on récupère des services de calculs (autant qu'il y'a de nbDivision)
                 // distributeur.recupererCalculateur() 
                 // on calcule une image grace au calculateur courant 
                 // on affiche l'image sur la scene 
 
-            for (int j =0; j<nbLignes; j++){
-                for (int i = 0; i < nbColonnes; i++) {
+            
+            for (int j =0; j<nbDivision; j++){
+                for (int i = 0; i < nbDivision; i++) {
                     int indexI = i;
                     int indexJ = j;
                      // Créer un nouveau thread pour chaque division
                     new Thread(() -> {
                             //tant que réaliser = false
                             boolean realiser=false;
+                            boolean recurrent = false;
                             while(!realiser){
-                                
+                                try{
                                     // Récupérer un service calculateur auprès du distributeur
                                     ServiceCalculateur calculateur = distributeur.recupererCalculateur();
                                     int x = divLargeur * indexI;
-                                    int y = divHauteur * indexJ;
+                                    int y = divHauteur * indexJ; 
                                     
-                                try{
-                                    // Calculer une image à l'aide du calculateur courant
-                                    Image image = calculateur.calculer(scene, x, y, divLargeur, divHauteur);
-
-                                    // Afficher l'image sur la scène
-                                    disp.setImage(image, x, y);
-
-                                    realiser = true;
-                                    System.out.println(" Division : " + (nbColonnes*indexJ + indexI) +" construite !");
-
-                                }catch(NullPointerException e){
                                     try{
-                                        System.out.println("en attente d'un service ...");
-                                        Thread.sleep(10000);
-                                    }catch (InterruptedException except){}
-                                }
-                                catch(Exception e){
-                                    distributeur.supprimerCalculateur(calculateur);
+                                        // Calculer une image à l'aide du calculateur courant
+                                        Image image = calculateur.calculer(scene, x, y, divLargeur, divHauteur);
+
+                                        // Afficher l'image sur la scène
+                                        disp.setImage(image, x, y);
+
+                                        realiser = true;
+                                        System.out.println(" Division : " + (nbDivision*indexJ + indexI) +" construite !");
+
+                                    }catch(NullPointerException e){
+                                        try{
+                                            System.out.println("en attente d'un service ... pour frame "+(nbDivision*indexJ + indexI));
+                                            Thread.sleep(10000);
+                                        }catch (InterruptedException except){}
+                                    }
+                                    catch(Exception e){
+                                            try{
+                                                distributeur.supprimerCalculateur(calculateur);
+                                            }catch(IndexOutOfBoundsException except){}
+                                    }
+                                }catch(Exception err){
+                                    try{
+                                            System.out.println("en attente du serveur");
+                                            Thread.sleep(10000);
+                                        }catch (InterruptedException except){}
                                 }
                             }
                     }).start();         
                 }
-            }
 
+
+            }
+            
+            // completer le dessin si affichage disproportionné : bidouillage pour bon affichage
+            
+            if(nbDivision*divLargeur<largeur){
+                terminerDessin(scene, disp, nbDivision*divLargeur , nbDivision*divHauteur, largeur, hauteur, nbDivision, true, distributeur, divHauteur, divLargeur);
+            }
+            if(nbDivision*divHauteur<hauteur){
+                terminerDessin(scene, disp, nbDivision*divLargeur , nbDivision*divHauteur, largeur, hauteur, nbDivision, false, distributeur, divHauteur, divLargeur);
+            }
+            if(nbDivision*divHauteur<hauteur && nbDivision*divLargeur<largeur)
+                terminerDessinAngle(scene, disp, nbDivision*divLargeur , nbDivision*divHauteur, largeur, hauteur, nbDivision, distributeur, divHauteur, divLargeur);
 
             
 
@@ -109,39 +130,105 @@ public class Main{
             e.printStackTrace();
         }
 
-
-
     }
 
-    public static int[] trouverMeilleureSolution(int n) {
-        if (n <= 0) {
-            System.out.println("Le nombre de parties doit être supérieur à zéro.");
-            return null;
-        }
-        
-        int meilleureDifference = Integer.MAX_VALUE; // Initialiser avec une valeur maximale
-        int[] meilleureSolution = new int[2];
-        
-        // Parcourir tous les diviseurs du nombre
-        for (int i = 1; i <= Math.sqrt(n); i++) {
-            if (n % i == 0) {
-                int diviseur1 = i;
-                int diviseur2 = n / i;
-                
-                int difference = Math.abs(diviseur1 - diviseur2);
-                
-                // Mettre à jour la meilleure solution si la différence est minimale
-                if (difference < meilleureDifference) {
-                    meilleureDifference = difference;
-                    meilleureSolution[0] = diviseur1;
-                    meilleureSolution[1] = diviseur2;
+    public static void terminerDessin(Scene scene, Disp disp, int  x, int  y, int largeur , int hauteur , int nbDivision, boolean L, ServiceDistributeur distributeur , int divHauteur, int divLargeur){
+                for (int i = 0; i < nbDivision; i++) {
+                    int indexI = i;
+                     // Créer un nouveau thread pour chaque division
+                    new Thread(() -> {
+                            //tant que réaliser = false
+                            boolean realiser=false;
+                            boolean recurrent = false;
+                            while(!realiser){
+                                try{
+                                    // Récupérer un service calculateur auprès du distributeur
+                                    ServiceCalculateur calculateur = distributeur.recupererCalculateur();
+                                    int y0,x0, l, h;
+                                    if(L){
+                                        l = largeur-x;
+                                        h = divHauteur;
+                                        x0 = x;
+                                        y0 = divHauteur * indexI; 
+                                    }else{
+                                        l = divLargeur;
+                                        h = hauteur-y;
+                                        x0 = divHauteur * indexI;
+                                        y0 = y;
+                                    }
+                                    try{
+                                        // Calculer une image à l'aide du calculateur courant
+                                        Image image = calculateur.calculer(scene, x0, y0, l, h);
+
+                                        // Afficher l'image sur la scène
+                                        disp.setImage(image, x0, y0);
+
+                                        realiser = true;
+                                        System.out.println(" Division de complétion construite !");
+
+                                    }catch(NullPointerException e){
+                                        try{
+                                            System.out.println("en attente d'un service ... pour frame de complétion");
+                                            Thread.sleep(10000);
+                                        }catch (InterruptedException except){}
+                                    }
+                                    catch(Exception e){
+                                            try{
+                                                distributeur.supprimerCalculateur(calculateur);
+                                            }catch(IndexOutOfBoundsException except){}
+                                    }
+                                }catch(Exception err){
+                                    try{
+                                            System.out.println("en attente du serveur");
+                                            Thread.sleep(10000);
+                                        }catch (InterruptedException except){}
+                                }
+                            }
+                    }).start();         
                 }
-            }
-        }
-        
-        return meilleureSolution;
     }
 
+public static void terminerDessinAngle(Scene scene, Disp disp, int  x, int  y, int largeur , int hauteur , int nbDivision, ServiceDistributeur distributeur , int divHauteur, int divLargeur){
+                     // Créer un nouveau thread pour chaque division
+                    new Thread(() -> {
+                            //tant que réaliser = false
+                            boolean realiser=false;
+                            boolean recurrent = false;
+                            int l = largeur-x;
+                            int h = hauteur-y;
+                            while(!realiser){
+                                try{
+                                    // Récupérer un service calculateur auprès du distributeur
+                                    ServiceCalculateur calculateur = distributeur.recupererCalculateur();
+                                    try{
+                                        // Calculer une image à l'aide du calculateur courant
+                                        Image image = calculateur.calculer(scene, x, y, l, h);
 
+                                        // Afficher l'image sur la scène
+                                        disp.setImage(image, x, y);
+
+                                        realiser = true;
+                                        System.out.println(" Division de complétion construite !");
+
+                                    }catch(NullPointerException e){
+                                        try{
+                                            System.out.println("en attente d'un service ... pour frame de complétion");
+                                            Thread.sleep(10000);
+                                        }catch (InterruptedException except){}
+                                    }
+                                    catch(Exception e){
+                                            try{
+                                                distributeur.supprimerCalculateur(calculateur);
+                                            }catch(IndexOutOfBoundsException except){}
+                                    }
+                                }catch(Exception err){
+                                    try{
+                                            System.out.println("en attente du serveur");
+                                            Thread.sleep(10000);
+                                        }catch (InterruptedException except){}
+                                }
+                            }
+                    }).start();         
+    }
 
 }
