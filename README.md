@@ -1,5 +1,7 @@
 # Séance 12 - Projet noté : Calcul Parallèle
 
+# Présentation du projet
+Une page web présentant le projet et permettant de télécharger les fichiers liés est disponible sur [ce site web](https://ray-tracing-rendu.vercel.app/)
 ## Préambule
 
 L'objectif de ce projet est d'illustrer un aspect de la programmation répartie : le calcul parallèle. En particulier, nous nous concentrerons sur la parallélisation des données. Cette approche est pertinente lorsque nous avons besoin de réaliser un traitement qui dépasse les capacités d'un ordinateur personnel. Ayant accès à un ensemble de machines, nous pouvons diviser le gros calcul en petits morceaux et les transmettre à ces machines pour obtenir le résultat final.
